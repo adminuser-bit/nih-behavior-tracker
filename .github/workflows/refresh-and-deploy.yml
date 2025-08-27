@@ -1,0 +1,51 @@
+name: Refresh data and deploy Pages
+
+on:
+  schedule:
+    - cron: "35 10 * * 1"   # Mondays 10:35 UTC (~6:35am ET)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout this repo
+        uses: actions/checkout@v4
+
+      - name: Checkout upstream reporter (sparse)
+        uses: actions/checkout@v4
+        with:
+          repository: dhoconno/reporter
+          path: _upstream
+          sparse-checkout: |
+            data/processed
+            README.md
+          fetch-depth: 1
+
+      - name: Prepare site data dir
+        run: mkdir -p pages/data
+
+      - name: Copy processed artifacts you need
+        run: |
+          cp -R _upstream/data/processed/* pages/data/ || true
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
