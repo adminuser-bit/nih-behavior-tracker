@@ -30,9 +30,13 @@ jobs:
       - name: Prepare site data dir
         run: mkdir -p pages/data
 
-      - name: Copy processed artifacts you need
-        run: |
-          cp -R _upstream/data/processed/* pages/data/ || true
+- name: Copy processed artifacts you need
+  run: |
+    cp -R _upstream/data/processed/* pages/data/ || true
+    # NEW: also copy any reporter files that look like award-amounts
+    mkdir -p pages/data/reporter
+    cp -v _upstream/data/processed/reporter/*amount* pages/data/reporter/ 2>/dev/null || true
+
 
       - name: Set up Python
         uses: actions/setup-python@v5
