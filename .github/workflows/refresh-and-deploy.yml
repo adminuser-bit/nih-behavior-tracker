@@ -34,6 +34,20 @@ jobs:
         run: |
           cp -R _upstream/data/processed/* pages/data/ || true
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas pyarrow zstandard
+
+      - name: Build YTD 2024 vs 2025 aggregates
+        run: |
+          python scripts/build_ytd_2024_2025.py
+
       - name: Create data manifest (for sanity check)
         run: |
           python - <<'PY'
