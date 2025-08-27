@@ -119,20 +119,40 @@ def main() -> int:
     if not date_col:
         raise RuntimeError(f"Could not detect a date column. Columns: {cols[:25]}...")
 
-    amount_col = _pick_col(
-        cols,
-        priority_exact=[
-            # best-first guesses (per-action obligations)
-            "award_amount", "award_amount_usd", "amount_this_action",
-            "action_amount", "obligation_amount", "obligated_amount",
-            "award_obligated_amount", "award_amount_current_usd",
-            # fallbacks (may be larger totals)
-            "total_cost_subproject", "total_cost", "fy_total_cost",
-        ],
-        priority_contains=["amount", "oblig", "cost"],
-    )
-    if not amount_col:
-        raise RuntimeError(f"Could not detect an amount column. Columns: {cols[:25]}...")
+    # Try many common names first…
+amount_col = _pick_col(
+    cols,
+    priority_exact=[
+        # per-action / obligation style
+        "award_amount","award_amount_usd","amount_this_action","action_amount",
+        "obligation_amount","obligated_amount","award_obligated_amount",
+        "award_amount_current_usd","current_amount","transaction_amount",
+        # total-style fallbacks (calendar/FY totals on the row)
+        "fy_total_cost","total_cost","total_cost_subproject",
+        "total_cost_amount","project_total_cost","award_total_cost",
+        "direct_cost","direct_cost_amt","direct_costs"
+    ],
+    priority_contains=["amount","oblig","cost","dollar"],
+)
+
+# If still not found, heuristically pick the first *numeric* column whose name smells like dollars.
+if not amount_col:
+    import pandas as pd
+    num_cols = [c for c in cols if pd.api.types.is_numeric_dtype(df[c])]
+    cand = []
+    for c in num_cols:
+        lc = c.lower()
+        if any(s in lc for s in ("amount","oblig","cost","dollar","total")):
+            cand.append(c)
+    if cand:
+        amount_col = cand[0]
+        print(f"[info] Using heuristic amount column: {amount_col}")
+
+if not amount_col:
+    # Last-ditch: print everything so the logs show us what to target next time
+    print("DEBUG all columns:", list(df.columns), file=sys.stderr)
+    raise RuntimeError("Could not detect an amount column.")
+
 
     org_col = _pick_col(cols, ["org_name", "organization", "organization_name", "org_name_norm"], ["org"])
     if not org_col:
