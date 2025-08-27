@@ -34,6 +34,22 @@ jobs:
         run: |
           cp -R _upstream/data/processed/* pages/data/ || true
 
+      - name: Create data manifest (for sanity check)
+        run: |
+          python - <<'PY'
+          import os, json
+          root = "pages/data"
+          files = []
+          for dp, dn, fn in os.walk(root):
+              for f in fn:
+                  p = os.path.join(dp, f)
+                  files.append({"path": os.path.relpath(p, root), "bytes": os.path.getsize(p)})
+          os.makedirs(root, exist_ok=True)
+          with open(os.path.join(root, "manifest.json"), "w") as fh:
+              json.dump({"count": len(files), "files": files[:50]}, fh, indent=2)
+          print(f"Wrote {root}/manifest.json with {len(files)} files")
+          PY
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
