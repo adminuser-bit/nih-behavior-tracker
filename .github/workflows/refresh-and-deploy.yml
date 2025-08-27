@@ -44,6 +44,20 @@ jobs:
           python -m pip install --upgrade pip
           pip install pandas pyarrow zstandard
 
+      - name: List copied files
+        run: |
+          echo "Tree under pages/data:"
+          find pages/data -maxdepth 2 -type f -ls | sed 's/^/  /'
+
+      - name: Preview awards columns
+        run: |
+          python - <<'PY'
+          import pandas as pd
+          p = "pages/data/reporter/nih_awards_all.csv.zst"
+          df = pd.read_csv(p, compression="zstd", nrows=0)
+          print("COLUMNS:", list(df.columns))
+          PY
+
       - name: Build YTD 2024 vs 2025 aggregates
         run: |
           python scripts/build_ytd_2024_2025.py
