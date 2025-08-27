@@ -50,6 +50,52 @@ jobs:
           print(f"Wrote {root}/manifest.json with {len(files)} files")
           PY
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps (pandas + zstd)
+        run: |
+          pip install --upgrade pip
+          pip install pandas pyarrow zstandard
+
+      - name: Create data manifest (for sanity check)
+        run: |
+          python - <<'PY'
+          import os, json
+          root = "pages/data"
+          files = []
+          for dp, dn, fn in os.walk(root):
+              for f in fn:
+                  p = os.path.join(dp, f)
+                  files.append({"path": os.path.relpath(p, root), "bytes": os.path.getsize(p)})
+          os.makedirs(root, exist_ok=True)
+          with open(os.path.join(root, "manifest.json"), "w") as fh:
+              json.dump({"count": len(files), "files": files[:50]}, fh, indent=2)
+          print(f"Wrote {root}/manifest.json with {len(files)} files")
+          PY
+
+      - name: Inspect upstream files & write samples
+        run: |
+          python - <<'PY'
+          import pandas as pd, json, os
+          base="pages/data"
+          os.makedirs(f"{base}/samples", exist_ok=True)
+
+          def save_head(path, name, compression=None, n=5):
+              df = pd.read_csv(path, compression=compression, nrows=n)
+              df.to_json(f"{base}/samples/{name}_head.json", orient="records", indent=2)
+              with open(f"{base}/samples/{name}_columns.json","w") as f:
+                  json.dump(list(df.columns), f, indent=2)
+
+          save_head(f"{base}/reporter/nih_awards_all.csv.zst", "awards", compression="zstd")
+          save_head(f"{base}/taggs/hhs_grants_terminated.csv", "taggs")
+          save_head(f"{base}/federal_register/nih_fr_meetings_all.csv.zst", "federal_register", compression="zstd")
+          print("Wrote sample head+columns JSONs")
+          PY
+
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
