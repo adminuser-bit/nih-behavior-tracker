@@ -22,6 +22,7 @@ jobs:
         with:
           repository: dhoconno/reporter
           path: _upstream
+          lfs: true
           sparse-checkout: |
             data/processed
             README.md
@@ -30,13 +31,19 @@ jobs:
       - name: Prepare site data dir
         run: mkdir -p pages/data
 
-- name: Copy processed artifacts you need
-  run: |
-    cp -R _upstream/data/processed/* pages/data/ || true
-    # NEW: also copy any reporter files that look like award-amounts
-    mkdir -p pages/data/reporter
-    cp -v _upstream/data/processed/reporter/*amount* pages/data/reporter/ 2>/dev/null || true
+      - name: Copy processed artifacts you need
+        run: |
+          # Copy everything under processed (as before)
+          cp -R _upstream/data/processed/* pages/data/ || true
+          # NEW: also pull any reporter files that look like award-amounts
+          mkdir -p pages/data/reporter
+          cp -v _upstream/data/processed/reporter/*amount* pages/data/reporter/ 2>/dev/null || true
 
+      # NEW debug: list what (if anything) we grabbed that contains amounts
+      - name: List award-amount candidates
+        run: |
+          echo "Looking for *amount* files under pages/data/reporter:"
+          find pages/data/reporter -maxdepth 1 -type f -ls 2>/dev/null || true
 
       - name: Set up Python
         uses: actions/setup-python@v5
